@@ -81,6 +81,102 @@ login_manager.login_message          = None   # Sin flash automático al redirig
 _lock_escaneo      = threading.Lock()
 _discover_sessions: dict = {}   # scan_id -> {'dispositivos': {}, 'running': bool}
 
+# Primeros 3 bytes de MAC (OUI) → fabricante de móviles más comunes en España
+_OUI_VENDORS: dict[str, str] = {
+    # Samsung
+    '001b98': 'Samsung', '001c43': 'Samsung', '00e3b2': 'Samsung',
+    '244b81': 'Samsung', '38d40b': 'Samsung', '4c3c16': 'Samsung',
+    '5c3c27': 'Samsung', '78d75f': 'Samsung', '8c71f8': 'Samsung',
+    'a0b4a5': 'Samsung', 'cc05fb': 'Samsung', 'ec1f72': 'Samsung',
+    'f025b7': 'Samsung', 'f8042f': 'Samsung', '94353a': 'Samsung',
+    '5cb901': 'Samsung', 'b4309e': 'Samsung', 'c4578d': 'Samsung',
+    'd022be': 'Samsung', 'e87d23': 'Samsung', '687f74': 'Samsung',
+    # Apple / iPhone
+    '001124': 'Apple', '0016cb': 'Apple', '0021e9': 'Apple',
+    '003065': 'Apple', '040cce': 'Apple', '086d41': 'Apple',
+    '10ddb1': 'Apple', '182032': 'Apple', '1c1ac0': 'Apple',
+    '203cae': 'Apple', '241eeb': 'Apple', '283737': 'Apple',
+    '3c0754': 'Apple', '406c8f': 'Apple', '48437c': 'Apple',
+    '5c0947': 'Apple', '600308': 'Apple', '68644b': 'Apple',
+    '701124': 'Apple', '7831c1': 'Apple', '80006e': 'Apple',
+    '842999': 'Apple', '881908': 'Apple', '9027e4': 'Apple',
+    '9800c6': 'Apple', 'a01111': 'Apple', 'a82066': 'Apple',
+    'ac1f74': 'Apple', 'b019c6': 'Apple', 'bc1c81': 'Apple',
+    'c01ada': 'Apple', 'c8334b': 'Apple', 'cc088d': 'Apple',
+    'd0034b': 'Apple', 'd81d72': 'Apple', 'dc0c5c': 'Apple',
+    'e425e7': 'Apple', 'f07960': 'Apple', 'f80332': 'Apple',
+    'fce998': 'Apple', '4c7403': 'Apple', '7c5cf8': 'Apple',
+    # Xiaomi / Redmi / POCO
+    '001869': 'Xiaomi', '103b59': 'Xiaomi', '283b96': 'Xiaomi',
+    '3c4f57': 'Xiaomi', '540f57': 'Xiaomi', '58f812': 'Xiaomi',
+    '5c2d34': 'Xiaomi', '64b473': 'Xiaomi', '74d2aa': 'Xiaomi',
+    '8899ec': 'Xiaomi', '8cbebe': 'Xiaomi', 'a45619': 'Xiaomi',
+    'b4f1da': 'Xiaomi', 'bc3b8f': 'Xiaomi', 'd89516': 'Xiaomi',
+    'f048ef': 'Xiaomi', 'fc64ba': 'Xiaomi', 'c46b9b': 'Xiaomi',
+    # Huawei / Honor
+    '001814': 'Huawei', '001e10': 'Huawei', '28d244': 'Huawei',
+    '304137': 'Huawei', '3440b5': 'Huawei', '380102': 'Huawei',
+    '40cb00': 'Huawei', '5465ed': 'Huawei', '607c8f': 'Huawei',
+    '6ccd97': 'Huawei', '748798': 'Huawei', '7c1cf1': 'Huawei',
+    '802398': 'Huawei', '848d4b': 'Huawei', '88a2d7': 'Huawei',
+    '9096f3': 'Huawei', 'bc7574': 'Huawei', 'c4072f': 'Huawei',
+    'd07ab5': 'Huawei', 'e04f43': 'Huawei', 'f0798e': 'Huawei',
+    # OPPO / Realme / OnePlus
+    '1c77ef': 'Oppo', '287c37': 'Oppo', '3476c5': 'Oppo',
+    '3497f6': 'Oppo', '4c5b9b': 'Oppo', '6c5c14': 'Oppo',
+    '701ce7': 'Oppo', '8458e0': 'Oppo', 'a0b145': 'Oppo',
+    'e0ac2b': 'Oppo', 'e45eed': 'Oppo', '98cb3c': 'Oppo',
+    # Motorola / Lenovo
+    '001a1b': 'Motorola', '001c8b': 'Motorola', '244ce3': 'Motorola',
+    '4024ec': 'Motorola', '64bc0c': 'Motorola', '90f652': 'Motorola',
+    # Google Pixel
+    '040d84': 'Google', '286d97': 'Google', '5494e0': 'Google',
+    '94ebec': 'Google', 'f4f5e8': 'Google',
+    # Nokia / HMD
+    '000d3a': 'Nokia', '08ed02': 'Nokia', '40b4cd': 'Nokia',
+    # Sony / Xperia
+    '001a80': 'Sony', '083d88': 'Sony', '74e225': 'Sony',
+    '84c7ea': 'Sony', 'bc6eb2': 'Sony',
+    # Vivo
+    '286c07': 'Vivo', '3c50a6': 'Vivo', '4c03b1': 'Vivo',
+    '500067': 'Vivo', '7c66ad': 'Vivo', '94765e': 'Vivo',
+}
+
+
+def _vendor_por_mac(mac: str) -> str | None:
+    """Retorna el fabricante a partir de los 3 primeros bytes (OUI) de la MAC."""
+    try:
+        oui = mac.replace(':', '').replace('-', '').lower()[:6]
+        return _OUI_VENDORS.get(oui)
+    except Exception:
+        return None
+
+
+def _vendor_por_nombre(nombre: str) -> str | None:
+    """Detecta el fabricante por palabras clave en el nombre Bluetooth del dispositivo."""
+    n = (nombre or '').lower()
+    if any(k in n for k in ('iphone', 'ipad', 'macbook', 'airpods', 'apple')):
+        return 'Apple'
+    if any(k in n for k in ('samsung', 'galaxy', 'sm-')):
+        return 'Samsung'
+    if any(k in n for k in ('xiaomi', 'redmi', 'poco', 'mipad')):
+        return 'Xiaomi'
+    if any(k in n for k in ('huawei', 'honor')):
+        return 'Huawei'
+    if any(k in n for k in ('oppo', 'realme', 'oneplus')):
+        return 'Oppo'
+    if any(k in n for k in ('motorola', 'moto ')):
+        return 'Motorola'
+    if 'pixel' in n:
+        return 'Google'
+    if 'nokia' in n:
+        return 'Nokia'
+    if any(k in n for k in ('sony', 'xperia')):
+        return 'Sony'
+    if 'vivo' in n:
+        return 'Vivo'
+    return None
+
 # Clave opcional para que el scheduler pueda llamar a /escanear sin sesión
 SCHEDULER_KEY = os.environ.get('SCHEDULER_KEY', '')
 
@@ -2269,8 +2365,10 @@ def discover_poll(scan_id):
     session = _discover_sessions.get(scan_id)
     if not session:
         return jsonify({'status': 'error', 'mensaje': 'Sesión no encontrada.'}), 404
-    dispositivos = [{'mac': mac, 'nombre': nombre}
-                    for mac, nombre in session['dispositivos'].items()]
+    dispositivos = []
+    for mac, nombre in session['dispositivos'].items():
+        vendor = _vendor_por_mac(mac) or _vendor_por_nombre(nombre)
+        dispositivos.append({'mac': mac, 'nombre': nombre, 'vendor': vendor or ''})
     return jsonify({'status': 'ok', 'running': session['running'], 'dispositivos': dispositivos})
 
 

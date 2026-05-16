@@ -189,6 +189,21 @@
                     </button>
                 </div>
 
+                <!-- Barra de filtros — visible durante escaneo y resultados -->
+                <div id="disc-filters" style="display:none;margin-bottom:14px;display:none;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <input id="disc-filter-nombre" type="text" placeholder="🔍 Buscar por nombre..."
+                               oninput="aplicarFiltros()"
+                               style="flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--border);
+                                      color:var(--tx0);border-radius:8px;padding:7px 12px;font-size:13px;outline:none;">
+                        <select id="disc-filter-marca" onchange="aplicarFiltros()"
+                                style="background:var(--bg2);border:1px solid var(--border);color:var(--tx0);
+                                       border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;">
+                            <option value="">Todos los fabricantes</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div id="disc-scanning" style="display:none;padding:12px 0;">
                     <div style="text-align:center;margin-bottom:12px;">
                         <div class="spinner mx-auto mb-3" style="width:36px;height:36px;border-width:3px;border-color:var(--acc-soft);border-top-color:var(--acc);"></div>
@@ -437,6 +452,17 @@ function mostrarEstado(estado) {
     });
     const target = document.getElementById('disc-' + estado);
     if (target) target.style.display = '';
+    // Mostrar barra de filtros solo cuando hay lista de dispositivos
+    const filtros = document.getElementById('disc-filters');
+    if (filtros) filtros.style.display = (estado === 'scanning' || estado === 'results') ? '' : 'none';
+    // Limpiar filtros al volver a idle
+    if (estado === 'idle') {
+        const inp = document.getElementById('disc-filter-nombre');
+        const sel = document.getElementById('disc-filter-marca');
+        if (inp) inp.value = '';
+        if (sel) sel.innerHTML = '<option value="">Todos los fabricantes</option>';
+        _todosDispositivos = [];
+    }
 }
 
 let _currentScanId  = null;
@@ -489,9 +515,28 @@ function pollDiscovery() {
         .catch(() => {});
 }
 
+const _VENDOR_ICONS = {
+    'Apple':    'bi-apple',
+    'Samsung':  'bi-phone',
+    'Xiaomi':   'bi-phone',
+    'Huawei':   'bi-phone',
+    'Oppo':     'bi-phone',
+    'Motorola': 'bi-phone',
+    'Google':   'bi-google',
+    'Nokia':    'bi-phone',
+    'Sony':     'bi-phone',
+    'Vivo':     'bi-phone',
+};
+
 function _renderDispositivo(d, onclick) {
-    const nombre = (d.nombre || 'Desconocido').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return `<div onclick="${onclick}('${d.mac}','${nombre}')"
+    const nombre  = (d.nombre || 'Desconocido').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const vendor  = (d.vendor || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const icon    = _VENDOR_ICONS[d.vendor] || 'bi-phone';
+    const badge   = d.vendor
+        ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--acc-soft);
+                        color:var(--acc);font-weight:600;letter-spacing:.3px;">${d.vendor}</span>`
+        : '';
+    return `<div onclick="${onclick}('${d.mac}','${nombre}','${vendor}')"
                  style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:10px;
                         border:1px solid var(--border);background:var(--bg2);cursor:pointer;
                         margin-bottom:8px;transition:border-color .15s;"
@@ -499,42 +544,104 @@ function _renderDispositivo(d, onclick) {
                  onmouseout="this.style.borderColor='var(--border)'">
                <div style="width:38px;height:38px;border-radius:9px;background:var(--acc-soft);
                            display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                   <i class="bi bi-phone" style="color:var(--acc);font-size:17px;"></i>
+                   <i class="bi ${icon}" style="color:var(--acc);font-size:17px;"></i>
                </div>
                <div>
-                   <div style="font-size:14px;font-weight:600;color:var(--tx0);">${d.nombre||'Desconocido'}</div>
+                   <div style="font-size:14px;font-weight:600;color:var(--tx0);display:flex;align-items:center;gap:7px;">
+                       ${d.nombre||'Desconocido'} ${badge}
+                   </div>
                    <code style="font-size:12px;color:var(--tx1);">${d.mac}</code>
                </div>
                <i class="bi bi-chevron-right ms-auto" style="color:var(--tx2);font-size:13px;"></i>
            </div>`;
 }
 
+// Cache de todos los dispositivos para re-filtrar sin nueva llamada al servidor
+let _todosDispositivos = [];
+
+function _marcasEnLista(dispositivos) {
+    const marcas = [...new Set(dispositivos.map(d => d.vendor).filter(Boolean))].sort();
+    return marcas;
+}
+
+function _actualizarSelectMarcas(dispositivos) {
+    const sel = document.getElementById('disc-filter-marca');
+    if (!sel) return;
+    const actual = sel.value;
+    const marcas = _marcasEnLista(dispositivos);
+    sel.innerHTML = '<option value="">Todos los fabricantes</option>' +
+        marcas.map(m => `<option value="${m}"${m===actual?' selected':''}>${m}</option>`).join('');
+}
+
+function aplicarFiltros() {
+    const textoFiltro = (document.getElementById('disc-filter-nombre')?.value || '').toLowerCase().trim();
+    const marcaFiltro = document.getElementById('disc-filter-marca')?.value || '';
+
+    const filtrados = _todosDispositivos.filter(d => {
+        const nombre  = (d.nombre || '').toLowerCase();
+        const mac     = (d.mac   || '').toLowerCase();
+        const vendor  = (d.vendor || '');
+        if (textoFiltro && !nombre.includes(textoFiltro) && !mac.includes(textoFiltro)) return false;
+        if (marcaFiltro && vendor !== marcaFiltro) return false;
+        return true;
+    });
+
+    // Actualizar lista live (durante escaneo)
+    const liveList = document.getElementById('disc-live-list');
+    if (liveList && liveList.closest('#disc-scanning').style.display !== 'none') {
+        liveList.innerHTML = filtrados.map(d => _renderDispositivo(d, 'seleccionarYDetener')).join('');
+    }
+    // Actualizar lista de resultados finales
+    const lista = document.getElementById('disc-list');
+    const empty = document.getElementById('disc-empty');
+    if (lista && lista.closest('#disc-results').style.display !== 'none') {
+        if (!filtrados.length) {
+            lista.innerHTML = '';
+            if (empty) empty.style.display = '';
+        } else {
+            if (empty) empty.style.display = 'none';
+            lista.innerHTML = filtrados.map(d => _renderDispositivo(d, 'seleccionarDispositivo')).join('');
+        }
+    }
+}
+
 function _actualizarListaLive(dispositivos) {
+    _todosDispositivos = dispositivos;
+    _actualizarSelectMarcas(dispositivos);
     const lista = document.getElementById('disc-live-list');
     if (!lista) return;
-    if (parseInt(lista.dataset.count || '-1') === dispositivos.length) return;
+    if (parseInt(lista.dataset.count || '-1') === dispositivos.length &&
+        !document.getElementById('disc-filter-nombre')?.value &&
+        !document.getElementById('disc-filter-marca')?.value) return;
     lista.dataset.count = dispositivos.length;
-    lista.innerHTML = dispositivos.map(d => _renderDispositivo(d, 'seleccionarYDetener')).join('');
+    aplicarFiltros();
 }
 
 function mostrarResultadosFinales(dispositivos) {
+    _todosDispositivos = dispositivos;
+    _actualizarSelectMarcas(dispositivos);
     mostrarEstado('results');
-    const lista  = document.getElementById('disc-list');
-    const empty  = document.getElementById('disc-empty');
-    if (!dispositivos.length) { lista.innerHTML = ''; empty.style.display = ''; return; }
-    empty.style.display = 'none';
-    lista.innerHTML = dispositivos.map(d => _renderDispositivo(d, 'seleccionarDispositivo')).join('');
+    const lista = document.getElementById('disc-list');
+    const empty = document.getElementById('disc-empty');
+    if (!dispositivos.length) { if (lista) lista.innerHTML = ''; if (empty) empty.style.display = ''; return; }
+    if (empty) empty.style.display = 'none';
+    if (lista) lista.innerHTML = dispositivos.map(d => _renderDispositivo(d, 'seleccionarDispositivo')).join('');
 }
 
-function seleccionarYDetener(mac, nombre) {
+function seleccionarYDetener(mac, nombre, vendor) {
     _detenerScanSilencioso();
-    seleccionarDispositivo(mac, nombre);
+    seleccionarDispositivo(mac, nombre, vendor);
 }
 
-function seleccionarDispositivo(mac, nombre) {
+function seleccionarDispositivo(mac, nombre, vendor) {
     macSeleccionada = mac; nombreSeleccionado = nombre;
     document.getElementById('disc-selected-mac').textContent = mac;
-    document.getElementById('disc-selected-name').textContent = nombre;
+    const nameEl = document.getElementById('disc-selected-name');
+    nameEl.textContent = nombre;
+    if (vendor) {
+        nameEl.innerHTML = `${nombre} <span style="font-size:11px;padding:2px 7px;border-radius:10px;
+            background:var(--acc-soft);color:var(--acc);font-weight:600;">${vendor}</span>`;
+    }
     mostrarEstado('action');
 }
 
