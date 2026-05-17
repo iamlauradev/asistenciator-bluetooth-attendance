@@ -304,106 +304,16 @@
                             </span>
                         {% endif %}
 
-                        <!-- Edición manual de asistencia -->
-                        <div class="edit-asistencia-wrap" style="position:relative;display:inline-block;">
-                            <button class="btn-edit-asistencia"
-                                    onclick="toggleEditMenu(this, {{ alumno.id_alumno }})"
-                                    title="Editar asistencia manualmente"
-                                    style="background:none;border:1px solid var(--tx2);
-                                           color:var(--tx2);border-radius:2px;
-                                           padding:3px 6px;cursor:pointer;font-size:11px;
-                                           transition:border-color .15s,color .15s;">
-                                <i class="bi bi-pencil-fill"></i>
-                            </button>
-                            <div class="edit-asistencia-menu" id="edit-menu-{{ alumno.id_alumno }}"
-                                 style="display:none;position:absolute;right:0;top:calc(100% + 4px);
-                                        background:var(--bg1);border:1px solid var(--border);
-                                        border-radius:6px;z-index:200;width:230px;
-                                        box-shadow:0 4px 20px rgba(0,0,0,0.4);padding:10px;">
-
-                                <!-- Cabecera -->
-                                <div style="font-family:'Share Tech Mono',monospace;font-size:9px;
-                                            color:var(--tx2);letter-spacing:.1em;margin-bottom:8px;">
-                                    // EDICIÓN MANUAL
-                                </div>
-
-                                <!-- Grid 2×2 -->
-                                <table style="width:100%;border-collapse:separate;border-spacing:4px;">
-                                    <thead>
-                                        <tr>
-                                            <td style="width:42%;font-family:'Share Tech Mono',monospace;
-                                                       font-size:8px;color:var(--tx2);padding-bottom:2px;"></td>
-                                            <td style="text-align:center;font-family:'Share Tech Mono',monospace;
-                                                       font-size:8px;color:var(--green);letter-spacing:.06em;
-                                                       padding-bottom:2px;">PRESENTE</td>
-                                            <td style="text-align:center;font-family:'Share Tech Mono',monospace;
-                                                       font-size:8px;color:var(--red);letter-spacing:.06em;
-                                                       padding-bottom:2px;">AUSENTE</td>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td style="font-family:'Rajdhani',sans-serif;font-size:11px;
-                                                       color:var(--tx1);font-weight:600;white-space:nowrap;">
-                                                <i class="bi bi-clock me-1" style="font-size:9px;"></i>Esta franja
-                                            </td>
-                                            <td style="text-align:center;">
-                                                <button onclick="editarAsistencia({{ alumno.id_alumno }}, 'PRESENTE', 'franja')"
-                                                        title="Marcar presente en la franja actual"
-                                                        style="background:rgba(74,222,128,.12);border:1px solid var(--green);
-                                                               color:var(--green);border-radius:3px;width:34px;height:28px;
-                                                               cursor:pointer;font-size:13px;transition:background .15s;">
-                                                    <i class="bi bi-check-lg"></i>
-                                                </button>
-                                            </td>
-                                            <td style="text-align:center;">
-                                                <button onclick="editarAsistencia({{ alumno.id_alumno }}, 'AUSENTE', 'franja')"
-                                                        title="Marcar ausente en la franja actual"
-                                                        style="background:rgba(248,113,113,.12);border:1px solid var(--red);
-                                                               color:var(--red);border-radius:3px;width:34px;height:28px;
-                                                               cursor:pointer;font-size:13px;transition:background .15s;">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-family:'Rajdhani',sans-serif;font-size:11px;
-                                                       color:var(--tx1);font-weight:600;white-space:nowrap;">
-                                                <i class="bi bi-calendar-day me-1" style="font-size:9px;"></i>Todo el día
-                                            </td>
-                                            <td style="text-align:center;">
-                                                <button onclick="editarAsistencia({{ alumno.id_alumno }}, 'PRESENTE', 'dia')"
-                                                        title="Marcar presente todo el día (el scanner no lo sobreescribirá)"
-                                                        style="background:rgba(74,222,128,.12);border:1px solid var(--green);
-                                                               color:var(--green);border-radius:3px;width:34px;height:28px;
-                                                               cursor:pointer;font-size:13px;transition:background .15s;">
-                                                    <i class="bi bi-check-lg"></i>
-                                                </button>
-                                            </td>
-                                            <td style="text-align:center;">
-                                                <button onclick="editarAsistencia({{ alumno.id_alumno }}, 'AUSENTE', 'dia')"
-                                                        title="Marcar ausente todo el día (el scanner no lo sobreescribirá)"
-                                                        style="background:rgba(248,113,113,.12);border:1px solid var(--red);
-                                                               color:var(--red);border-radius:3px;width:34px;height:28px;
-                                                               cursor:pointer;font-size:13px;transition:background .15s;">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-
-                                <!-- Limpiar -->
-                                <button onclick="editarAsistencia({{ alumno.id_alumno }}, 'SIN_DATOS', 'dia')"
-                                        style="display:block;width:100%;text-align:center;background:none;
-                                               border:none;border-top:1px solid var(--border);
-                                               margin-top:8px;padding-top:8px;cursor:pointer;
-                                               color:var(--tx2);font-family:'Rajdhani',sans-serif;
-                                               font-size:12px;font-weight:600;letter-spacing:.04em;">
-                                    <i class="bi bi-trash3 me-1"></i>Limpiar día
-                                </button>
-                            </div>
-                        </div>
+                        <!-- Botón edición manual -->
+                        <button class="btn-edit-asistencia"
+                                onclick="toggleEditMenu(this, {{ alumno.id_alumno }})"
+                                title="Editar asistencia manualmente"
+                                style="background:none;border:1px solid var(--tx2);
+                                       color:var(--tx2);border-radius:2px;
+                                       padding:3px 6px;cursor:pointer;font-size:11px;
+                                       transition:border-color .15s,color .15s;">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -513,6 +423,88 @@
     </div>
 </div>
 
+{# ── Popup global de edición manual (único, posicionado por JS) ── #}
+<div id="edit-popup-global"
+     style="display:none;position:fixed;z-index:9999;
+            background:var(--bg1);border:1px solid var(--border);
+            border-radius:6px;width:236px;
+            box-shadow:0 6px 28px rgba(0,0,0,0.55);padding:12px;">
+
+    <div style="font-family:'Share Tech Mono',monospace;font-size:9px;
+                color:var(--tx2);letter-spacing:.1em;margin-bottom:10px;">
+        // EDICIÓN MANUAL
+    </div>
+
+    <table style="width:100%;border-collapse:separate;border-spacing:4px;">
+        <thead>
+            <tr>
+                <td style="width:44%;"></td>
+                <td style="text-align:center;font-family:'Share Tech Mono',monospace;
+                           font-size:8px;color:var(--green);letter-spacing:.06em;
+                           padding-bottom:3px;">PRESENTE</td>
+                <td style="text-align:center;font-family:'Share Tech Mono',monospace;
+                           font-size:8px;color:var(--red);letter-spacing:.06em;
+                           padding-bottom:3px;">AUSENTE</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="font-family:'Rajdhani',sans-serif;font-size:11px;
+                           color:var(--tx1);font-weight:600;white-space:nowrap;padding:3px 0;">
+                    <i class="bi bi-clock me-1" style="font-size:9px;"></i>Esta franja
+                </td>
+                <td style="text-align:center;">
+                    <button onclick="editarAsistencia('PRESENTE','franja')"
+                            style="background:rgba(74,222,128,.12);border:1px solid var(--green);
+                                   color:var(--green);border-radius:3px;width:36px;height:30px;
+                                   cursor:pointer;font-size:14px;">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                </td>
+                <td style="text-align:center;">
+                    <button onclick="editarAsistencia('AUSENTE','franja')"
+                            style="background:rgba(248,113,113,.12);border:1px solid var(--red);
+                                   color:var(--red);border-radius:3px;width:36px;height:30px;
+                                   cursor:pointer;font-size:14px;">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-family:'Rajdhani',sans-serif;font-size:11px;
+                           color:var(--tx1);font-weight:600;white-space:nowrap;padding:3px 0;">
+                    <i class="bi bi-calendar-day me-1" style="font-size:9px;"></i>Todo el día
+                </td>
+                <td style="text-align:center;">
+                    <button onclick="editarAsistencia('PRESENTE','dia')"
+                            style="background:rgba(74,222,128,.12);border:1px solid var(--green);
+                                   color:var(--green);border-radius:3px;width:36px;height:30px;
+                                   cursor:pointer;font-size:14px;">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                </td>
+                <td style="text-align:center;">
+                    <button onclick="editarAsistencia('AUSENTE','dia')"
+                            style="background:rgba(248,113,113,.12);border:1px solid var(--red);
+                                   color:var(--red);border-radius:3px;width:36px;height:30px;
+                                   cursor:pointer;font-size:14px;">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button onclick="editarAsistencia('SIN_DATOS','dia')"
+            style="display:block;width:100%;text-align:center;background:none;
+                   border:none;border-top:1px solid var(--border);
+                   margin-top:8px;padding-top:8px;cursor:pointer;
+                   color:var(--tx2);font-family:'Rajdhani',sans-serif;
+                   font-size:12px;font-weight:600;letter-spacing:.04em;">
+        <i class="bi bi-trash3 me-1"></i>Limpiar día
+    </button>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -543,30 +535,61 @@ function iniciarEscaneo(force) {
     .catch(() => { alert('Error de conexi\xc3\xb3n.'); window.location.reload(); });
 }
 
-// ── Edición manual de asistencia ────────────────────────────────────────────
+// ── Edición manual de asistencia ─────────────────────────────────────────────
+
+let _editPopupAlumno = null;
 
 function toggleEditMenu(btn, idAlumno) {
-    // Cierra cualquier otro menú abierto
-    document.querySelectorAll('.edit-asistencia-menu').forEach(m => {
-        if (m.id !== 'edit-menu-' + idAlumno) m.style.display = 'none';
-    });
-    const menu = document.getElementById('edit-menu-' + idAlumno);
-    const visible = menu.style.display === 'block';
-    menu.style.display = visible ? 'none' : 'block';
+    const popup = document.getElementById('edit-popup-global');
+    // Si ya estaba abierto para este mismo alumno, cerrar
+    if (popup.style.display === 'block' && _editPopupAlumno === idAlumno) {
+        popup.style.display = 'none';
+        _editPopupAlumno = null;
+        return;
+    }
+    _editPopupAlumno = idAlumno;
+
+    // Calcular posición relativa al botón lápiz
+    const rect = btn.getBoundingClientRect();
+    const popW = 236;
+    const margen = 6;
+
+    // Colocar debajo del botón por defecto; si no cabe, colocar arriba
+    let top  = rect.bottom + margen;
+    let left = rect.right - popW;   // alineado a la derecha del botón
+    if (left < 8) left = 8;         // no salir por la izquierda
+
+    // Si se sale por abajo, subir sobre el botón
+    const popH = 190;               // altura estimada del popup
+    if (top + popH > window.innerHeight - 8) {
+        top = rect.top - popH - margen;
+    }
+
+    popup.style.top  = top  + 'px';
+    popup.style.left = left + 'px';
+    popup.style.display = 'block';
 }
 
-// Cierra menús al hacer clic fuera
+// Cerrar al hacer clic fuera del popup o del botón lápiz
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.edit-asistencia-wrap')) {
-        document.querySelectorAll('.edit-asistencia-menu').forEach(m => m.style.display = 'none');
+    const popup = document.getElementById('edit-popup-global');
+    if (!e.target.closest('#edit-popup-global') &&
+        !e.target.closest('.btn-edit-asistencia')) {
+        popup.style.display = 'none';
+        _editPopupAlumno = null;
     }
 });
 
-function editarAsistencia(idAlumno, estado) {
+function editarAsistencia(estado, alcance) {
+    if (!_editPopupAlumno) return;
+    const idAlumno = _editPopupAlumno;
+    document.getElementById('edit-popup-global').style.display = 'none';
+    _editPopupAlumno = null;
+
     fetch('/asistencia/editar/' + idAlumno, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: estado })
+        body: JSON.stringify({ estado: estado, alcance: alcance })
     })
     .then(r => r.json())
     .then(d => {
