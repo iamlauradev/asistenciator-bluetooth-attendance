@@ -52,38 +52,38 @@
         }
 
         [data-theme="light"] {
-            --bg0:        #e8f4fd;
+            --bg0:        #f2f6fb;
             --bg1:        #ffffff;
-            --bg2:        #f0f8ff;
-            --bg3:        #dceefb;
-            --border:     #b3d9f2;
-            --border-glow:rgba(2,136,209,0.2);
-            --acc:        #0288d1;
-            --acc2:       #01579b;
-            --acc-dark:   #003f6b;
-            --acc-soft:   rgba(2,136,209,0.08);
-            --acc-border: rgba(2,136,209,0.3);
-            --acc-glow:   rgba(2,136,209,0.4);
-            --tx0:        #0d1b2a;
-            --tx1:        #2a5278;
-            --tx2:        #7aaac8;
-            --success-bg: rgba(0,150,70,0.08);
-            --success-tx: #007a3a;
-            --danger-bg:  rgba(200,30,30,0.08);
-            --danger-tx:  #c0392b;
-            --warning-bg: rgba(180,130,0,0.08);
-            --warning-tx: #8a6000;
-            --muted-bg:   #dceefb;
-            --muted-tx:   #7aaac8;
-            --sidebar-bg: #04070f;
+            --bg2:        #e8f0f9;
+            --bg3:        #dce8f4;
+            --border:     #c2d5ea;
+            --border-glow:rgba(26,107,181,0.15);
+            --acc:        #1a6bb5;
+            --acc2:       #1256a0;
+            --acc-dark:   #0d3f7a;
+            --acc-soft:   rgba(26,107,181,0.08);
+            --acc-border: rgba(26,107,181,0.25);
+            --acc-glow:   rgba(26,107,181,0.25);
+            --tx0:        #0d1b2e;
+            --tx1:        #2c4f6e;
+            --tx2:        #5c7d9a;
+            --success-bg: rgba(0,120,60,0.08);
+            --success-tx: #006830;
+            --danger-bg:  rgba(180,20,20,0.08);
+            --danger-tx:  #b01020;
+            --warning-bg: rgba(160,110,0,0.10);
+            --warning-tx: #7a5400;
+            --muted-bg:   #dce8f4;
+            --muted-tx:   #5c7d9a;
+            --sidebar-bg: #ffffff;
             --topbar-bg:  #ffffff;
             --card-bg:    #ffffff;
-            --surface:    #e8f4fd;
-            --shadow:     0 2px 12px rgba(0,0,0,0.08);
-            --shadow-glow:0 0 12px rgba(2,136,209,0.1);
+            --surface:    #f2f6fb;
+            --shadow:     0 2px 12px rgba(0,60,120,0.07);
+            --shadow-glow:0 0 12px rgba(26,107,181,0.08);
             --rank-s:     #b8860b;
             --rank-a:     #7b1fa2;
-            --rank-b:     #0288d1;
+            --rank-b:     #1a6bb5;
         }
 
         /* =====================================================
@@ -116,6 +116,59 @@
         }
 
         [data-theme="light"] body::before { display: none; }
+
+        /* ── Overrides modo claro: sidebar ─────────────────────────── */
+        [data-theme="light"] .sidebar {
+            box-shadow: 2px 0 16px rgba(0,60,120,0.08);
+        }
+        [data-theme="light"] .sidebar-logo-icon::before {
+            background: linear-gradient(135deg, transparent 40%, rgba(26,107,181,0.08));
+        }
+        [data-theme="light"] .sidebar-nav a {
+            color: var(--tx1);
+        }
+        [data-theme="light"] .sidebar-nav a:hover {
+            color: var(--tx0);
+            background: var(--acc-soft);
+        }
+        [data-theme="light"] .sidebar-nav a.active {
+            color: var(--acc);
+            text-shadow: none;
+        }
+        [data-theme="light"] .sidebar-nav a.active i {
+            filter: none;
+        }
+        [data-theme="light"] .sidebar-section {
+            color: var(--tx2);
+        }
+        [data-theme="light"] .sidebar-logo-text .app-name {
+            text-shadow: none;
+        }
+        [data-theme="light"] .sidebar-logo-text .app-sub {
+            color: var(--tx2);
+        }
+        [data-theme="light"] .sidebar-footer {
+            color: var(--tx2);
+        }
+        [data-theme="light"] .topbar-title {
+            text-shadow: none;
+        }
+        [data-theme="light"] .card::before,
+        [data-theme="light"] .card::after {
+            opacity: 0.25;
+        }
+        [data-theme="light"] .user-avatar {
+            text-shadow: none;
+        }
+        [data-theme="light"] .nav-badge-live {
+            box-shadow: none;
+        }
+        [data-theme="light"] .topbar-horario {
+            box-shadow: none;
+        }
+        [data-theme="light"] .stat-card:hover {
+            box-shadow: var(--shadow), 0 0 16px rgba(26,107,181,0.08);
+        }
 
         /* =====================================================
            SIDEBAR
@@ -390,10 +443,6 @@
             letter-spacing: 0.08em;
             text-transform: uppercase;
             text-shadow: 0 0 10px var(--acc-glow);
-        }
-
-        [data-theme="light"] .topbar-title {
-            text-shadow: none;
         }
 
         .topbar-horario {
