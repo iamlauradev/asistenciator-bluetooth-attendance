@@ -648,29 +648,52 @@ def obtener_horario_activo(cursor) -> dict | None:
     return cursor.fetchone()
 
 
-def upsert_estado_dia(cursor, id_alumno: int, fecha: date, nuevo_estado: str) -> dict:
+def upsert_estado_dia(cursor, id_alumno: int, fecha: date, nuevo_estado: str,
+                       manual: bool = False) -> dict:
+    """
+    Actualiza estado_alumno_dia.
+    - manual=True  → edición humana; activa manual_override para que el scanner
+                     no la sobrescriba.
+    - manual=False → llamada del scanner; respeta manual_override existente.
+    """
     cursor.execute(
-        "SELECT estado_actual, notificado FROM estado_alumno_dia WHERE id_alumno = %s AND fecha = %s",
+        "SELECT estado_actual, notificado, manual_override FROM estado_alumno_dia "
+        "WHERE id_alumno = %s AND fecha = %s",
         (id_alumno, fecha)
     )
     fila = cursor.fetchone()
 
     if fila is None:
         cursor.execute(
-            "INSERT INTO estado_alumno_dia (id_alumno, fecha, estado_actual, notificado) VALUES (%s, %s, %s, FALSE)",
-            (id_alumno, fecha, nuevo_estado)
+            "INSERT INTO estado_alumno_dia "
+            "(id_alumno, fecha, estado_actual, notificado, manual_override) "
+            "VALUES (%s, %s, %s, FALSE, %s)",
+            (id_alumno, fecha, nuevo_estado, int(manual))
         )
         return {'estado_anterior': None, 'estado_actual': nuevo_estado, 'notificado': False}
+
+    # Si hay override manual activo y quien llama es el scanner → no tocar
+    override_activo = bool(fila.get('manual_override', 0))
+    if override_activo and not manual:
+        return {
+            'estado_anterior': fila['estado_actual'],
+            'estado_actual':   fila['estado_actual'],
+            'notificado':      bool(fila['notificado']),
+        }
 
     estado_anterior  = fila['estado_actual']
     notificado_prev  = bool(fila['notificado'])
     nuevo_notificado = notificado_prev if estado_anterior == nuevo_estado else False
 
     cursor.execute(
-        "UPDATE estado_alumno_dia SET estado_actual = %s, notificado = %s, ultima_actualizacion = NOW() WHERE id_alumno = %s AND fecha = %s",
-        (nuevo_estado, nuevo_notificado, id_alumno, fecha)
+        "UPDATE estado_alumno_dia "
+        "SET estado_actual = %s, notificado = %s, manual_override = %s, "
+        "    ultima_actualizacion = NOW() "
+        "WHERE id_alumno = %s AND fecha = %s",
+        (nuevo_estado, nuevo_notificado, int(manual), id_alumno, fecha)
     )
-    return {'estado_anterior': estado_anterior, 'estado_actual': nuevo_estado, 'notificado': nuevo_notificado}
+    return {'estado_anterior': estado_anterior, 'estado_actual': nuevo_estado,
+            'notificado': nuevo_notificado}
 
 
 # Helpers para asignaturas con múltiples profesores
@@ -1487,16 +1510,25 @@ def editar_asistencia(id_alumno):
     Edición manual del estado de asistencia de un alumno para hoy.
     Accesible por todos los roles (admin, tutor, profesor).
 
-    Body JSON: { "estado": "PRESENTE" | "AUSENTE" | "SIN_DATOS" }
+    Body JSON:
+      { "estado": "PRESENTE" | "AUSENTE" | "SIN_DATOS",
+        "alcance": "franja" | "dia" }
 
-    SIN_DATOS elimina el registro del día en lugar de escribir un valor
-    especial, porque en la BD la ausencia de fila == sin datos.
+    - alcance "franja": registra en la tabla asistencia para la franja
+      horaria activa en este momento. Requiere que haya una clase activa.
+    - alcance "dia": establece estado_alumno_dia directamente con
+      manual_override=True para que el scanner no lo sobrescriba.
+
+    SIN_DATOS limpia el registro del día (y las asistencias si alcance=dia).
     """
-    body        = request.get_json(silent=True, force=True) or {}
+    body         = request.get_json(silent=True, force=True) or {}
     nuevo_estado = body.get('estado', '').upper()
+    alcance      = body.get('alcance', 'dia')
 
     if nuevo_estado not in ('PRESENTE', 'AUSENTE', 'SIN_DATOS'):
         return jsonify({"status": "error", "mensaje": "Estado inválido."}), 400
+    if alcance not in ('franja', 'dia'):
+        return jsonify({"status": "error", "mensaje": "Alcance inválido."}), 400
 
     conexion = conectar_db()
     cursor   = conexion.cursor()
@@ -1510,22 +1542,72 @@ def editar_asistencia(id_alumno):
         conexion.close()
         return jsonify({"status": "error", "mensaje": "Alumno no encontrado."}), 404
 
-    hoy = date.today()
+    hoy   = date.today()
+    ahora = datetime.now().time()
 
     if nuevo_estado == 'SIN_DATOS':
         cursor.execute(
             "DELETE FROM estado_alumno_dia WHERE id_alumno = %s AND fecha = %s",
             (id_alumno, hoy)
         )
-    else:
-        upsert_estado_dia(cursor, id_alumno, hoy, nuevo_estado)
+        if alcance == 'dia':
+            cursor.execute(
+                "DELETE FROM asistencia WHERE id_alumno = %s AND fecha = %s",
+                (id_alumno, hoy)
+            )
+
+    elif alcance == 'franja':
+        # Buscar la franja activa ahora mismo para este alumno
+        dia_semana = hoy.weekday()
+        cursor.execute(
+            """
+            SELECT h.id_horario
+            FROM horarios h
+            JOIN matriculas m ON m.id_asignatura = h.id_asignatura
+            WHERE m.id_alumno  = %s
+              AND h.dia_semana = %s
+              AND h.hora_inicio <= %s
+              AND h.hora_fin   >= %s
+            LIMIT 1
+            """,
+            (id_alumno, dia_semana, ahora, ahora)
+        )
+        horario = cursor.fetchone()
+        if not horario:
+            conexion.close()
+            return jsonify({
+                "status":  "error",
+                "mensaje": "No hay franja horaria activa en este momento para este alumno."
+            }), 400
+
+        cursor.execute(
+            """
+            INSERT INTO asistencia (id_alumno, id_horario, fecha, hora_registro, estado)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE estado = %s, hora_registro = %s
+            """,
+            (id_alumno, horario['id_horario'], hoy, ahora, nuevo_estado,
+             nuevo_estado, ahora)
+        )
+        # Recalcular estado_alumno_dia a partir de los registros del día
+        cursor.execute(
+            "SELECT estado FROM asistencia WHERE id_alumno = %s AND fecha = %s",
+            (id_alumno, hoy)
+        )
+        estados_hoy = [r['estado'] for r in cursor.fetchall()]
+        estado_dia = 'PRESENTE' if 'PRESENTE' in estados_hoy else 'AUSENTE'
+        upsert_estado_dia(cursor, id_alumno, hoy, estado_dia, manual=True)
+
+    else:  # alcance == 'dia'
+        upsert_estado_dia(cursor, id_alumno, hoy, nuevo_estado, manual=True)
 
     conexion.commit()
     conexion.close()
 
     log.info(
         f"ASISTENCIA_MANUAL usuario={current_user.nombre} "
-        f"alumno={alumno['nombre']} estado={nuevo_estado} fecha={hoy}"
+        f"alumno={alumno['nombre']} estado={nuevo_estado} "
+        f"alcance={alcance} fecha={hoy}"
     )
     return jsonify({"status": "ok", "estado": nuevo_estado})
 
