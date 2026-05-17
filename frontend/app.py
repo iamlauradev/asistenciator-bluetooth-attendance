@@ -1235,19 +1235,17 @@ def escanear():
             for a in alumnos_bd
         ]
 
+        # Cerrar la conexión ANTES del escaneo: el escaneo Bluetooth puede tardar
+        # 30-60 s y MariaDB cierra conexiones inactivas (net_read_timeout / wait_timeout).
+        # Abrimos una conexión nueva justo después de que termine.
+        conexion.close()
+
         resultados    = escanear_alumnos(alumnos_detector)
         fecha_hoy     = date.today()
         hora_registro = datetime.now().time()
 
-        # El escaneo puede tardar decenas de segundos; la conexión puede haber
-        # sido cerrada por MariaDB (wait_timeout / net_read_timeout).
-        # ping(reconnect=True) la restablece transparentemente antes de escribir.
-        try:
-            conexion.ping(reconnect=True)
-            cursor = conexion.cursor()
-        except Exception:
-            conexion = conectar_db()
-            cursor   = conexion.cursor()
+        conexion = conectar_db()
+        cursor   = conexion.cursor()
 
         pendientes_notificar = []
 
