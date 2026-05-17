@@ -1239,6 +1239,16 @@ def escanear():
         fecha_hoy     = date.today()
         hora_registro = datetime.now().time()
 
+        # El escaneo puede tardar decenas de segundos; la conexión puede haber
+        # sido cerrada por MariaDB (wait_timeout / net_read_timeout).
+        # ping(reconnect=True) la restablece transparentemente antes de escribir.
+        try:
+            conexion.ping(reconnect=True)
+            cursor = conexion.cursor()
+        except Exception:
+            conexion = conectar_db()
+            cursor   = conexion.cursor()
+
         pendientes_notificar = []
 
         for id_alumno, nombre_completo, esta_presente in resultados:

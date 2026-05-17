@@ -516,7 +516,7 @@ function iniciarEscaneo(force) {
     btn.disabled = true;
     btn.classList.add('scanning');
     icono.outerHTML = '<div class="spinner" id="btnIcono"></div>';
-    texto.textContent = 'ESCANEANDO\xe2\x80\xa6';
+    texto.textContent = 'ESCANEANDO…';
 
     fetch('/escanear', {
         method: 'POST',
